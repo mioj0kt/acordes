@@ -114,10 +114,38 @@ dialog::backdrop{background:rgba(8,10,14,.6)}
 .slow{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px;font-variant-numeric:tabular-nums}
 .slow li{display:flex;justify-content:space-between;border-bottom:1px solid var(--line);padding-bottom:6px}
 .hint-small{font-size:13px;color:var(--ink-2)}
+.diag-on .chord{font-size:clamp(52px,17vw,84px)}
+.diag-on .chord.solfa{font-size:clamp(40px,12vw,60px)}
+.diag-on .long,.diag-on .notes{display:none}
+.diag-on .stage{gap:4px;padding:10px}
+.diag{display:flex;flex-direction:column;gap:8px;font-size:12px}
+.diag-head{display:flex;align-items:center;gap:10px}
+.diag-head b{font-size:13px}
+.diag-head span{flex:1;min-width:0;color:var(--ink-2);font-variant-numeric:tabular-nums}
+.diag-head .btn{padding:5px 10px;font-size:12px}
+.bars{position:relative;display:grid;grid-template-columns:repeat(12,1fr);gap:3px;height:74px;align-items:end;padding-bottom:16px}
+.bars .col{position:relative;height:100%;display:flex;align-items:flex-end;justify-content:center;border-radius:4px;background:var(--bg)}
+.bars .fillbar{width:100%;background:var(--ink-2);border-radius:4px 4px 0 0;min-height:1px}
+.bars .col.tgt .fillbar{background:var(--accent)}
+.bars .col.hit .fillbar{background:var(--ok)}
+.bars .lab{position:absolute;bottom:-15px;left:0;right:0;text-align:center;font-size:10px;color:var(--ink-2)}
+.bars .col.tgt .lab{color:var(--ink);font-weight:700}
+.bars .thr{position:absolute;left:0;right:0;height:0;border-top:1px dashed var(--warn);pointer-events:none}
+.diag-text{margin:0;font:11px/1.45 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;white-space:pre;overflow-x:auto;color:var(--ink)}
 .range-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;font-weight:600}
 select{appearance:auto;font:inherit;font-weight:600;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:9px 12px}
 select:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
-.row-end{display:flex;justify-content:space-between;gap:12px}
+.row-end{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.cal-note{font:800 clamp(64px,22vw,96px)/1 var(--font-display);letter-spacing:-.03em;text-align:center}
+.cal-sub{text-align:center;color:var(--ink-2);font-weight:600;margin:0}
+.cal-dots{display:flex;flex-wrap:wrap;gap:4px;justify-content:center}
+.cal-dots i{width:10px;height:10px;border-radius:3px;background:var(--line)}
+.cal-dots i.done{background:var(--ok)}
+.cal-dots i.skip{background:var(--warn)}
+.cal-dots i.cur{background:var(--accent)}
+.cal-sum{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px}
+.cal-sum li{padding-bottom:8px;border-bottom:1px solid var(--line)}
+.btn.small{padding:8px 12px;font-size:14px}
 </style>
 </head>
 <body data-mode="mic">
@@ -133,6 +161,8 @@ select:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
       <p>O microfone escuta o piano. Acertou, vem o próximo.</p>
       <button class="btn primary" id="start" type="button">Começar</button>
       <div class="err" id="err" role="alert" hidden></div>
+      <button class="btn" id="calIntroBtn" type="button">Calibrar meu piano</button>
+      <p class="hint-small" id="calIntroInfo"></p>
       <button class="btn link" id="manualBtn" type="button">Sem microfone? Usar o teclado da tela</button>
       <p class="hint-small">Fique num lugar silencioso, com o celular perto do piano. Nada é gravado nem enviado.</p>
     </section>
@@ -144,6 +174,12 @@ select:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
       <div class="status" id="status"></div>
     </section>
   </main>
+
+  <div class="card diag" id="diagCard" hidden>
+    <div class="diag-head"><b>Diagnóstico</b><span id="diagInfo"></span><button class="btn" id="diagFreeze" type="button">Congelar</button></div>
+    <div class="bars" id="bars" aria-hidden="true"></div>
+    <pre class="diag-text" id="diagText"></pre>
+  </div>
 
   <div class="card kb" id="kbCard" hidden><div id="kb"></div></div>
 
@@ -204,6 +240,16 @@ select:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
     </div>
 
     <div>
+      <h3>Calibração</h3>
+      <p class="hint-small" id="calStatus"></p>
+      <div class="row-end">
+        <button class="btn" id="calOpen" type="button">Calibrar meu piano</button>
+        <button class="btn link" id="calClear" type="button">Apagar</button>
+      </div>
+      <label class="switch">Usar a calibração <input type="checkbox" id="optCal"></label>
+    </div>
+
+    <div>
       <h3>Nomes</h3>
       <div class="seg" id="segNotation">
         <label><input type="radio" name="notation" value="cifra"><span>Cifra (C, Am)</span></label>
@@ -214,6 +260,7 @@ select:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
     <div>
       <label class="switch">Mostrar as notas do acorde <input type="checkbox" id="optNotes"></label>
       <label class="switch">Mostrar o teclado <input type="checkbox" id="optKeys"></label>
+      <label class="switch">Mostrar diagnóstico (para ajustar o app) <input type="checkbox" id="optDiag"></label>
     </div>
 
     <div>
@@ -226,6 +273,51 @@ select:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
       <button class="btn primary" style="padding:10px 22px;font-size:16px" value="close">Fechar</button>
     </div>
   </form>
+</dialog>
+
+<dialog id="calDlg">
+  <div class="sheet">
+    <h2>Calibrar o piano</h2>
+
+    <div id="calIntro">
+      <p class="hint-small" style="font-size:15px;color:var(--ink)">O app aprende a afinação do seu piano, como o microfone capta cada região e quanto de cada harmônico o piano produz. Isso melhora o reconhecimento das notas mais difíceis.</p>
+      <p class="hint-small" style="font-size:15px;color:var(--ink)">Toque cada nota pedida, uma por vez, com força média, e deixe soar por um segundo. Fique num lugar silencioso.</p>
+      <div class="range-row">
+        <label for="calLo">Da oitava</label>
+        <select id="calLo"></select>
+        <label for="calHi">até</label>
+        <select id="calHi"></select>
+      </div>
+      <p class="hint-small" id="calEst"></p>
+      <div class="err" id="calErr" role="alert" hidden></div>
+      <div class="row-end">
+        <button class="btn link" id="calCancel0" type="button">Cancelar</button>
+        <button class="btn primary" id="calGo" type="button" style="padding:10px 22px;font-size:16px">Começar</button>
+      </div>
+    </div>
+
+    <div id="calRun" hidden>
+      <p class="cal-sub">Toque</p>
+      <div class="cal-note" id="calNote"></div>
+      <p class="cal-sub" id="calProg"></p>
+      <div class="meter" aria-hidden="true"><div class="fill" id="calFill"></div><div class="gate" id="calGate"></div></div>
+      <div class="meter-line"><label for="calSens" style="width:auto">Sensibilidade</label><input type="range" id="calSens" min="0" max="100" step="1"></div>
+      <div class="status" id="calMsg" style="text-align:center"></div>
+      <div class="cal-dots" id="calDots" aria-hidden="true"></div>
+      <div class="row-end">
+        <button class="btn small" id="calSkip" type="button">Pular nota</button>
+        <button class="btn small" id="calFinish" type="button">Terminar e salvar</button>
+      </div>
+    </div>
+
+    <div id="calDone" hidden>
+      <ul class="cal-sum" id="calSum"></ul>
+      <div class="row-end">
+        <button class="btn link" id="calRedo" type="button">Refazer</button>
+        <button class="btn primary" id="calClose" type="button" style="padding:10px 22px;font-size:16px">Pronto</button>
+      </div>
+    </div>
+  </div>
 </dialog>
 
 <script>
@@ -286,16 +378,19 @@ const MIDI_SCAN = 34, DEF_LO = 48, DEF_HI = 95;   // padrao: oitavas 3 a 6
 // [intervalo em semitons, quanto do parcial sai da nota mais alta]: tira os harmonicos de cada nota
 // para que a quinta e a terca "fantasmas" do piano nao contem como notas tocadas.
 const HARM = [[12,.6],[19,.45],[24,.3],[28,.3],[31,.2],[34,.14],[36,.15],[38,.1]];
+const KOFF = HARM.map(h => h[0]), HARMW = HARM.map(h => h[1]);   // semitons acima / peso padrao de cada harmonico (2o ao 9o)
+const CAL_K = [2, 3, 4, 5, 6, 7, 8, 9];                           // numero do harmonico, na mesma ordem de KOFF
 
 /* mag: amplitude linear por bin da FFT. Devolve o chroma (12 classes de nota). */
-function analyzeSpectrum(mag, sr, n, gateDb, lo, hi){
+function analyzeSpectrum(mag, sr, n, gateDb, lo, hi, cal){
   if (lo === undefined) lo = DEF_LO;
   if (hi === undefined) hi = DEF_HI;
   const binHz = sr / n;
   const S = new Float32Array(hi + 2);
   let maxS = 0;
   for (let m = MIDI_SCAN; m <= hi; m++){
-    const f = 440 * Math.pow(2, (m - 69) / 12);
+    let f = 440 * Math.pow(2, (m - 69) / 12);
+    if (cal) f *= Math.pow(2, cal.cents[m] / 1200);   // afinacao real do piano, medida na calibracao
     // +-35 centavos, mas nunca mais estreito que 0,75 bin: nas notas graves a janela pegaria a base do pico vizinho
     const hw = Math.max(f * 0.0204, 0.75 * binHz);
     let b0 = Math.ceil((f - hw) / binHz), b1 = Math.floor((f + hw) / binHz);
@@ -303,6 +398,7 @@ function analyzeSpectrum(mag, sr, n, gateDb, lo, hi){
     b0 = Math.max(0, b0); b1 = Math.min(mag.length - 1, b1);
     let p = 0;
     for (let b = b0; b <= b1; b++) if (mag[b] > p) p = mag[b];
+    if (cal) p *= cal.gain[m];                         // iguala a resposta do microfone entre as notas
     S[m] = p;
     if (m >= lo && p > maxS) maxS = p;   // volume e limiar medidos so dentro da faixa
   }
@@ -321,16 +417,111 @@ function analyzeSpectrum(mag, sr, n, gateDb, lo, hi){
     const k = binsPerSemi < 2.6 ? 1.8 : binsPerSemi < 3.6 ? 3 : 8;
     A[m] = (nb > k * S[m] || S[m] < floor) ? 0 : S[m];
   }
+  const P = Float32Array.from(A);   // antes de tirar harmonicos (so para o diagnostico)
   for (let m = MIDI_SCAN; m <= hi; m++){
     const v = A[m];
     if (v <= 0) continue;
-    for (const h of HARM){
-      const j = m + h[0];
-      if (j <= hi) A[j] = Math.max(0, A[j] - h[1] * v);
+    const hr = cal ? cal.h[m] : HARMW;                 // proporcao de harmonicos: medida no piano ou padrao
+    for (let q = 0; q < KOFF.length; q++){
+      const j = m + KOFF[q];
+      if (j > hi) break;
+      const sc = cal ? cal.gain[j] / cal.gain[m] : 1;
+      A[j] = Math.max(0, A[j] - hr[q] * v * sc);
     }
   }
   for (let m = lo; m <= hi; m++) chroma[m % 12] += A[m];
-  return {active: true, peakDb, chroma};
+  return {active: true, peakDb, chroma, S, A, P, lo, hi, maxS, floor};
+}
+
+/* ---------- calibracao ---------- */
+// Maior bin entre f*2^(c0/1200) e f*2^(c1/1200); largura minima de 0,75 bin para cada lado.
+function calPeak(mag, binHz, f, c0, c1){
+  const a = f * Math.pow(2, c0 / 1200), b = f * Math.pow(2, c1 / 1200);
+  const mid = (a + b) / 2, half = Math.max((b - a) / 2, 0.75 * binHz);
+  let b0 = Math.max(0, Math.ceil((mid - half) / binHz)), b1 = Math.min(mag.length - 1, Math.floor((mid + half) / binHz));
+  if (b1 < b0) b0 = b1 = Math.min(mag.length - 1, Math.max(0, Math.round(mid / binHz)));
+  let p = 0, pb = b0;
+  for (let i = b0; i <= b1; i++) if (mag[i] > p){ p = mag[i]; pb = i; }
+  return {p, pb};
+}
+/* Mede UMA nota tocada sozinha: afinacao (centavos), volume do fundamental e proporcao dos harmonicos 2 a 9. */
+function calMeasure(mag, sr, n, target, gateDb){
+  const binHz = sr / n;
+  const fT = 440 * Math.pow(2, (target - 69) / 12);
+  const top = Math.min(mag.length - 1, Math.floor(5000 / binHz));
+  let gm = 0, gb = 0;
+  for (let b = Math.ceil(40 / binHz); b <= top; b++) if (mag[b] > gm){ gm = mag[b]; gb = b; }
+  const gdb = gm > 0 ? 20 * Math.log10(gm) : -200;
+  if (gdb < gateDb) return {ok: false, why: 'quiet', gdb};
+  // o maior pico tem de ser o fundamental ou um dos 3 primeiros harmonicos da nota pedida
+  const gf = gb * binHz;
+  let near = false;
+  for (let k = 1; k <= 4; k++) if (Math.abs(1200 * Math.log2(gf / (k * fT))) < 110) near = true;
+  if (!near) return {ok: false, why: 'other', gdb, heard: Math.round(69 + 12 * Math.log2(gf / 440))};
+  const f1 = calPeak(mag, binHz, fT, -100, 100);
+  if (f1.p < 0.25 * gm) return {ok: false, why: 'weakf0', gdb};   // fundamental fraco: tocou outra oitava
+  const pb = f1.pb;
+  let est = pb * binHz;                                           // interpolacao parabolica em escala log
+  if (pb > 0 && pb < mag.length - 1 && mag[pb - 1] > 0 && mag[pb + 1] > 0){
+    const a = Math.log(mag[pb - 1]), b = Math.log(mag[pb]), c = Math.log(mag[pb + 1]);
+    const d = a - 2 * b + c;
+    if (d < 0){ const dl = 0.5 * (a - c) / d; if (Math.abs(dl) <= 1) est = (pb + dl) * binHz; }
+  }
+  const cents = Math.max(-100, Math.min(100, 1200 * Math.log2(est / fT)));
+  const r = CAL_K.map(k => {
+    const fk = k * est;
+    if (fk > 9000) return 0;
+    return Math.min(1.2, calPeak(mag, binHz, fk, -30, 70).p / f1.p);   // parciais de piano sobem um pouco de afinacao
+  });
+  return {ok: true, cents, g: f1.p, r, gdb};
+}
+function median(a){
+  const s = a.slice().sort((x, y) => x - y), k = s.length >> 1;
+  return s.length % 2 ? s[k] : (s[k - 1] + s[k]) / 2;
+}
+function calCombine(frames){
+  return {c: median(frames.map(f => f.cents)), g: median(frames.map(f => f.g)), r: CAL_K.map((_, i) => median(frames.map(f => f.r[i])))};
+}
+/* notes: {midi: {c, g, r[8]}}. Devolve as tabelas por nota (0..127) usadas em analyzeSpectrum, ou null. */
+function buildCal(notes){
+  const ms = Object.keys(notes).map(Number).filter(m => m >= 24 && m <= 120).sort((a, b) => a - b);
+  if (ms.length < 3) return null;
+  const cMed = median(ms.map(m => notes[m].c));
+  const cents = new Float32Array(128).fill(cMed);
+  for (const m of ms) cents[m] = Math.max(-60, Math.min(60, notes[m].c));
+  // volume: o toque varia de nota para nota, entao so a curva suave (mediana de +-3 semitons) vale como resposta do microfone
+  const gdb = {}, gs = {};
+  ms.forEach(m => { gdb[m] = 20 * Math.log10(Math.max(1e-9, notes[m].g)); });
+  ms.forEach(m => { gs[m] = median(ms.filter(x => Math.abs(x - m) <= 3).map(x => gdb[x])); });
+  const gref = median(ms.map(m => gs[m]));
+  const lo = ms[0], hi = ms[ms.length - 1];
+  const gainDb = new Float32Array(128);
+  for (let m = 0; m < 128; m++){
+    let v;
+    if (gs[m] !== undefined) v = gref - gs[m];
+    else if (m > lo && m < hi){
+      let a = m - 1; while (gs[a] === undefined) a--;
+      let b = m + 1; while (gs[b] === undefined) b++;
+      v = gref - (gs[a] + (m - a) / (b - a) * (gs[b] - gs[a]));
+    } else {
+      const edge = m < lo ? lo : hi;
+      v = (gref - gs[edge]) * Math.max(0, 1 - Math.abs(m - edge) / 12);
+    }
+    gainDb[m] = Math.max(-9, Math.min(9, v));
+  }
+  const gain = Float32Array.from(gainDb, d => Math.pow(10, d / 20));
+  const hsm = {};
+  ms.forEach(m => {
+    const nb = ms.filter(x => Math.abs(x - m) <= 2);
+    hsm[m] = CAL_K.map((_, q) => median(nb.map(x => notes[x].r[q])));
+  });
+  const h = new Array(128);
+  for (let m = 0; m < 128; m++){
+    let best = lo, bd = 1e9;
+    for (const x of ms){ const d = Math.abs(x - m); if (d < bd){ bd = d; best = x; } }
+    h[m] = Float32Array.from(bd <= 12 ? hsm[best] : HARMW, v => v * 0.85);   // 85%: descontar de menos custa menos que apagar uma nota tocada
+  }
+  return {cents, gain, gainDb, h, count: ms.length, tuning: cMed, lo, hi};
 }
 
 const MATCH = {cov: 0.15, extra: 0.35, purity: 0.75};
@@ -365,8 +556,14 @@ const STORE = 'treino-acordes.v1';
 const NEED_FRAMES = 4;      // quadros seguidos corretos (~0,25 s) antes de aceitar
 const FRAME_MS = 55;
 
-const DEFAULTS = {level:'iniciante', notation:'cifra', showNotes:true, showKeys:true, sens:55, octLo:3, octHi:6, tol:'normal'};
+const DEFAULTS = {useCal:true, diag:false, level:'iniciante', notation:'cifra', showNotes:true, showKeys:true, sens:55, octLo:3, octHi:6, tol:'normal'};
 let cfg = Object.assign({}, DEFAULTS);
+const CALKEY = 'treino-acordes.cal.v1';
+let calRaw = null, cal = null;   // calibracao guardada e as tabelas montadas a partir dela
+try {
+  const raw = localStorage.getItem(CALKEY);
+  if (raw){ calRaw = JSON.parse(raw); cal = buildCal(calRaw.notes || {}); if (!cal) calRaw = null; }
+} catch(e){ calRaw = null; cal = null; }
 let stats = {total:0, streak:0, best:0, per:{}, recent:[]};
 try {
   const raw = localStorage.getItem(STORE);
@@ -458,6 +655,75 @@ function pickNext(){
   return list[list.length - 1];
 }
 
+/* ---------- diagnostico ---------- */
+let diagBest = null, diagFrozen = false, diagBuilt = false;
+const PCN = ['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'];
+const nname = m => PCN[m % 12] + (Math.floor(m / 12) - 1);
+function buildDiag(){
+  const bars = $('bars');
+  for (let i = 0; i < 12; i++){
+    const c = document.createElement('div'); c.className = 'col';
+    const f = document.createElement('div'); f.className = 'fillbar';
+    const l = document.createElement('div'); l.className = 'lab'; l.textContent = PCN[i];
+    c.append(f, l); bars.append(c);
+  }
+  const thr = document.createElement('div'); thr.className = 'thr'; thr.id = 'thr'; bars.append(thr);
+  diagBuilt = true;
+}
+function layoutDiag(){
+  const on = !!cfg.diag && mode === 'mic' && !!current;
+  $('diagCard').hidden = !on;
+  document.body.classList.toggle('diag-on', on);
+  $('kbCard').hidden = on || !(cfg.showKeys || mode === 'manual');
+  if (on && !diagBuilt) buildDiag();
+  if (on) renderDiag(diagBest && diagBest.a);
+}
+const dbRel = (v, ref) => v > 0 && ref > 0 ? Math.round(20 * Math.log10(v / ref)) : -99;
+function renderDiag(a){
+  if (!diagBuilt) return;
+  const cols = $('bars').children, cov = TOL[cfg.tol] || TOL.normal;
+  $('thr').style.bottom = 'calc(16px + (100% - 16px) * ' + cov + ')';
+  if (!a || !current){
+    for (let i = 0; i < 12; i++){ cols[i].firstChild.style.height = '0'; cols[i].className = 'col' + (current && current.pcs.indexOf(i) >= 0 ? ' tgt' : ''); }
+    $('diagInfo').textContent = 'toque o acorde';
+    $('diagText').textContent = 'Mostra o momento mais forte dos últimos 4 s.';
+    return;
+  }
+  let cmax = 0; for (let i = 0; i < 12; i++) if (a.chroma[i] > cmax) cmax = a.chroma[i];
+  const need = [];
+  for (let i = 0; i < 12; i++){
+    const r = cmax > 0 ? a.chroma[i] / cmax : 0, tgt = current.pcs.indexOf(i) >= 0;
+    cols[i].firstChild.style.height = 'calc((100% ) * ' + r.toFixed(3) + ')';
+    cols[i].className = 'col' + (tgt ? ' tgt' + (r >= cov ? ' hit' : '') : '');
+    if (tgt) need.push(PCN[i] + ' ' + Math.round(r * 100) + '%');
+  }
+  $('diagInfo').textContent = 'volume ' + Math.round(a.peakDb) + ' dB · faixa ' + nname(a.lo) + '–' + nname(a.hi) + ' · calibração ' + (cal && cfg.useCal !== false ? 'ligada' : 'desligada');
+  const rows = [];
+  for (let m = 34; m <= a.hi; m++) if (a.S[m] > a.maxS * 0.02 || (m >= a.lo && a.S[m] > a.maxS * 0.01)) rows.push(m);
+  rows.sort((x, y) => a.S[y] - a.S[x]);
+  const lines = ['Alvo: ' + need.join('  ') + '  (mínimo ' + Math.round(cov * 100) + '%)', 'nota  bruto  final  situação'];
+  rows.slice(0, 11).forEach(m => {
+    let st;
+    if (m < a.lo) st = 'fora da faixa';
+    else if (a.S[m] < a.floor) st = 'fraca (< -26 dB)';
+    else if (a.P[m] === 0) st = 'apagada (vizinha forte)';
+    else if (a.A[m] === 0) st = 'apagada (harm. de grave)';
+    else if (a.A[m] < a.P[m] * 0.8) st = 'reduzida (harmônico)';
+    else st = 'ok';
+    lines.push(nname(m).padEnd(5) + String(dbRel(a.S[m], a.maxS)).padStart(5) + ' dB' + (a.A[m] > 0 ? String(dbRel(a.A[m], a.maxS)).padStart(5) + ' dB' : '    -   ') + '  ' + st);
+  });
+  $('diagText').textContent = lines.join('\n');
+}
+function diagFeed(a, t){
+  if (!cfg.diag || diagFrozen || $('diagCard').hidden) return;
+  if (!a.active){ if (diagBest && t - diagBest.t > 4000){ diagBest = null; renderDiag(null); } return; }
+  if (!diagBest || t - diagBest.t > 4000 || a.peakDb >= diagBest.a.peakDb - 1){ diagBest = {a, t}; renderDiag(a); }
+}
+$('diagFreeze').addEventListener('click', () => {
+  diagFrozen = !diagFrozen;
+  $('diagFreeze').textContent = diagFrozen ? 'Retomar' : 'Congelar';
+});
+
 function setStatus(text, cls){
   const el = $('status');
   el.className = 'status' + (cls ? ' ' + cls : '');
@@ -478,7 +744,7 @@ function renderChord(){
   $('chordLong').textContent = solfa ? prettySymbol(c) : longName(c);
   $('notes').textContent = c.notes.map(noteLabel).join('  ·  ');
   $('notes').hidden = !cfg.showNotes;
-  $('kbCard').hidden = !(cfg.showKeys || mode === 'manual');
+  layoutDiag();
 }
 
 function nextChord(){
@@ -531,6 +797,7 @@ function hint(m){
 
 function onFrame(a, t){
   setMeter(a.peakDb);
+  diagFeed(a, t);
   if (t < cooldownUntil) return;
   if (!a.active){
     matchFrames = 0;
@@ -558,7 +825,7 @@ function evalManual(){
 }
 
 /* ---------- microfone ---------- */
-let ctx = null, analyser = null, dbBuf = null, mag = null, raf = 0, lastT = 0, maxBin = 0, stream = null;
+let ctx = null, analyser = null, dbBuf = null, mag = null, raf = 0, lastT = 0, maxBin = 0, calBin = 0, stream = null;
 const gateDb = () => -80 + (100 - cfg.sens) * 0.5;
 // Oitavas em notacao cientifica: Do central = C4 = MIDI 60. Valores guardados de versoes antigas sao corrigidos.
 cfg.octLo = Math.min(7, Math.max(2, Math.round(+cfg.octLo) || DEFAULTS.octLo));
@@ -602,14 +869,25 @@ function applyAudio(){
   mag = new Float32Array(analyser.frequencyBinCount);
   const topHz = 440 * Math.pow(2, (noteHi() + 1 - 69) / 12);
   maxBin = Math.min(mag.length, Math.ceil(topHz / (ctx.sampleRate / analyser.fftSize)) + 2);
+  calBin = Math.min(mag.length, Math.ceil(10000 / (ctx.sampleRate / analyser.fftSize)));   // a calibracao le ate o 9o harmonico
+}
+function ensureLoop(){ if (!raf) raf = requestAnimationFrame(loop); }
+function stopMic(){
+  if (raf){ cancelAnimationFrame(raf); raf = 0; }
+  try { if (stream) stream.getTracks().forEach(t => t.stop()); } catch(e){}
+  try { if (ctx) ctx.close(); } catch(e){}
+  ctx = null; analyser = null; stream = null; dbBuf = null; mag = null;
 }
 function loop(t){
   raf = requestAnimationFrame(loop);
   if (t - lastT < FRAME_MS) return;
   lastT = t;
   analyser.getFloatFrequencyData(dbBuf);
-  for (let i = 0; i < maxBin; i++){ const d = dbBuf[i]; mag[i] = d > -160 ? Math.pow(10, d / 20) : 0; }
-  onFrame(analyzeSpectrum(mag, ctx.sampleRate, analyser.fftSize, gateDb(), noteLo(), noteHi()), t);
+  const calRun = !!(calSt && calSt.run);
+  const nb = calRun ? calBin : maxBin;
+  for (let i = 0; i < nb; i++){ const d = dbBuf[i]; mag[i] = d > -160 ? Math.pow(10, d / 20) : 0; }
+  if (calRun) onCalFrame(t);
+  else if (current) onFrame(analyzeSpectrum(mag, ctx.sampleRate, analyser.fftSize, gateDb(), noteLo(), noteHi(), cfg.useCal !== false ? cal : null), t);
 }
 function setMeter(db){
   const pct = Math.max(0, Math.min(1, (db + 90) / 70)) * 100;
@@ -625,23 +903,26 @@ function enter(){
   $('intro').hidden = true; $('play').hidden = false; $('foot').hidden = false;
   $('meterRow').hidden = mode !== 'mic';
   placeGate(); updateStats(); nextChord();
-  if (mode === 'mic') raf = requestAnimationFrame(loop);
+  if (mode === 'mic') ensureLoop();
 }
-$('start').addEventListener('click', async () => {
-  const err = $('err'); err.hidden = true;
-  try { await startMic(); mode = 'mic'; enter(); }
-  catch (e){
-    const msg = {
+function micMsg(e){
+    return {
       NotAllowedError: 'O navegador bloqueou o microfone. Toque no cadeado ao lado do endereço, permita o microfone para este site e recarregue a página. No iPhone: Ajustes > Safari > Microfone.',
       SecurityError: 'O navegador bloqueou o microfone. Toque no cadeado ao lado do endereço, permita o microfone para este site e recarregue a página.',
       NotFoundError: 'Nenhum microfone foi encontrado neste aparelho.',
       NotReadableError: 'Outro app está usando o microfone. Feche gravadores e chamadas e tente de novo.',
-      Arquivo: 'Abrir o arquivo direto do aparelho não libera o microfone. Hospede o arquivo (por exemplo no Netlify Drop) e abra o link https no Chrome ou no Safari.',
+      Arquivo: 'Abrir o arquivo direto do aparelho não libera o microfone. Hospede o arquivo e abra o link https no Chrome ou no Safari.',
       Embutida: 'Esta página está dentro de outra (uma prévia ou visualizador), e ali o microfone é bloqueado. Abra o link direto no Chrome ou no Safari, fora da prévia.',
       AppInterno: 'Navegadores dentro de apps (WhatsApp, Instagram e similares) bloqueiam o microfone. Copie o link e abra no Chrome ou no Safari.',
       Insecure: 'O microfone só funciona em endereços https. Abra o link que começa com https://.',
       Unsupported: 'Este navegador não permite usar o microfone aqui. Tente o Chrome ou o Safari atualizados.'
     }[e && e.name] || 'Não consegui abrir o microfone (' + ((e && e.name) || 'erro desconhecido') + ').';
+}
+$('start').addEventListener('click', async () => {
+  const err = $('err'); err.hidden = true;
+  try { if (!ctx) await startMic(); mode = 'mic'; enter(); }
+  catch (e){
+    const msg = micMsg(e);
     err.textContent = msg; err.hidden = false;
   }
 });
@@ -651,6 +932,155 @@ document.addEventListener('visibilitychange', () => {
   if (!ctx) return;
   if (document.hidden) ctx.suspend(); else ctx.resume();
 });
+
+/* ---------- calibracao ---------- */
+let calSt = null;
+const calDlg = $('calDlg');
+const CAL_FRAMES = 8;   // quadros bons seguidos (~0,45 s) para aceitar uma nota
+const midiName = m => noteLabel(SHARP[m % 12]) + (Math.floor(m / 12) - 1);
+const fmtCents = c => (c >= 0 ? '+' : '−') + Math.abs(c).toFixed(0) + ' cents';
+const calView = v => { $('calIntro').hidden = v !== 'intro'; $('calRun').hidden = v !== 'run'; $('calDone').hidden = v !== 'done'; };
+function calMsg(text, cls){
+  const el = $('calMsg');
+  el.className = 'status' + (cls ? ' ' + cls : '');
+  if (cls === 'live'){ el.textContent = ''; const d = document.createElement('span'); d.className = 'dot'; el.append(d, text); }
+  else el.textContent = text;
+}
+function refreshCalInfo(){
+  $('calStatus').textContent = cal
+    ? 'Calibrado: ' + cal.count + ' notas, de ' + midiName(cal.lo) + ' a ' + midiName(cal.hi) + '. Afinação do piano: ' + fmtCents(cal.tuning) + ' em relação ao Lá 440 Hz.' + (cfg.useCal === false ? ' Está desligada.' : '')
+    : 'Ainda não calibrado. A calibração melhora o reconhecimento das notas difíceis.';
+  $('calIntroInfo').textContent = cal ? 'Calibração salva.' : 'Recomendado para o seu piano.';
+  $('calClear').hidden = !cal;
+  $('optCal').checked = cfg.useCal !== false;
+}
+function fillCalSel(){
+  ['calLo', 'calHi'].forEach(id => {
+    const el = $(id);
+    if (!el.options.length) for (let o = 2; o <= 7; o++) el.add(new Option(String(o), String(o)));
+  });
+  $('calLo').value = String(cfg.octLo);
+  $('calHi').value = String(Math.min(cfg.octHi, cfg.octLo + 2));
+  calEst();
+}
+function calEst(){
+  let lo = +$('calLo').value, hi = +$('calHi').value;
+  if (lo > hi){ hi = lo; $('calHi').value = String(hi); }
+  const n = (hi - lo + 1) * 12;
+  $('calEst').textContent = n + ' notas, de ' + midiName(12 * (lo + 1)) + ' a ' + midiName(12 * (hi + 1) + 11) + '. Leva uns ' + Math.max(1, Math.round(n * 3 / 60)) + ' min. Dá para terminar antes e as notas puladas ficam como estavam.';
+}
+function placeCalGate(){
+  $('calGate').style.left = 'calc(' + (Math.max(0, Math.min(1, (gateDb() + 90) / 70)) * 100) + '% - 1px)';
+}
+function openCal(){
+  if (dlg.open) dlg.close();
+  calSt = null;
+  fillCalSel();
+  $('calErr').hidden = true;
+  calView('intro');
+  calDlg.showModal();
+}
+function buildCalDots(){
+  const box = $('calDots'); box.textContent = '';
+  calSt.list.forEach(() => box.append(document.createElement('i')));
+}
+function renderCalNote(){
+  const st = calSt, m = st.list[st.idx];
+  $('calNote').textContent = midiName(m);
+  $('calProg').textContent = (m === 60 ? 'Dó central · ' : '') + 'nota ' + (st.idx + 1) + ' de ' + st.list.length;
+  Array.from($('calDots').children).forEach((el, i) => { el.className = i === st.idx ? 'cur' : st.state[i] === 1 ? 'done' : st.state[i] === 2 ? 'skip' : ''; });
+  calMsg('Toque a nota', 'live');
+}
+function onCalFrame(t){
+  const st = calSt, target = st.list[st.idx];
+  const r = calMeasure(mag, ctx.sampleRate, analyser.fftSize, target, gateDb());
+  $('calFill').style.width = (Math.max(0, Math.min(1, (r.gdb + 90) / 70)) * 100) + '%';
+  $('calFill').classList.toggle('on', r.gdb >= gateDb());
+  if (t < st.pauseUntil) return;
+  if (r.ok){
+    st.bad = 0; st.quiet = 0; st.frames.push(r);
+    calMsg('Segure a nota…', 'live');
+    if (st.frames.length >= CAL_FRAMES){
+      st.notes[target] = calCombine(st.frames);
+      st.state[st.idx] = 1;
+      try { if (navigator.vibrate) navigator.vibrate(25); } catch(e){}
+      calNext(t);
+    }
+    return;
+  }
+  st.frames.length = 0;
+  if (r.why === 'quiet'){
+    st.bad = 0;
+    calMsg(++st.quiet > 45 ? 'Não estou ouvindo. Chegue mais perto do piano ou aumente a sensibilidade.' : 'Toque a nota', 'live');
+  } else {
+    st.quiet = 0;
+    if (++st.bad >= 8) calMsg(r.why === 'other' ? 'Ouvi ' + midiName(r.heard) + ', mas o pedido é ' + midiName(target) + '.' : 'Toque exatamente ' + midiName(target) + ' (nesta oitava).', 'warn');
+  }
+}
+function calNext(t){
+  const st = calSt;
+  st.frames = []; st.bad = 0; st.quiet = 0; st.pauseUntil = t + 1100;   // deixa a nota anterior parar de soar
+  st.idx++;
+  if (st.idx >= st.list.length){ calFinish(); return; }
+  renderCalNote();
+}
+function calFinish(){
+  const st = calSt;
+  const count = Object.keys(st.notes).length;
+  if (count < 3 && st.idx < st.list.length){ calMsg('Toque pelo menos 3 notas antes de terminar.', 'warn'); return; }
+  st.run = false;
+  if (mag) mag.fill(0);
+  const built = count >= 3 ? buildCal(st.notes) : null;
+  const li = txt => { const el = document.createElement('li'); el.textContent = txt; $('calSum').append(el); };
+  $('calSum').textContent = '';
+  if (!built){
+    li('Não consegui medir notas suficientes. Chegue mais perto do piano, aumente a sensibilidade e tente de novo.');
+  } else {
+    calRaw = {t: Date.now(), notes: st.notes}; cal = built;
+    try { localStorage.setItem(CALKEY, JSON.stringify(calRaw)); } catch(e){}
+    li(built.count + ' notas calibradas, de ' + midiName(built.lo) + ' a ' + midiName(built.hi) + '.');
+    li('Afinação do seu piano: ' + fmtCents(built.tuning) + ' em relação ao Lá 440 Hz.');
+    const weak = Object.keys(st.notes).map(Number).filter(m => built.gainDb[m] >= 3).sort((a, b) => built.gainDb[b] - built.gainDb[a]).slice(0, 4);
+    li(weak.length ? 'O microfone capta menos: ' + weak.sort((a, b) => a - b).map(midiName).join(', ') + '. O app compensa isso.' : 'O microfone capta todas as regiões de forma parecida.');
+    const skipped = st.state.filter(v => v !== 1).length;
+    if (skipped) li(skipped + ' notas ficaram sem calibrar e usam o ajuste padrão.');
+    li('A calibração já está valendo.');
+  }
+  refreshCalInfo();
+  calView('done');
+}
+$('calGo').addEventListener('click', async () => {
+  $('calErr').hidden = true;
+  try { if (!ctx) await startMic(); }
+  catch (e){ $('calErr').textContent = micMsg(e); $('calErr').hidden = false; return; }
+  applyAudio();
+  const lo = +$('calLo').value, hi = +$('calHi').value, list = [];
+  for (let m = 12 * (lo + 1); m <= 12 * (hi + 1) + 11; m++) list.push(m);
+  calSt = {run: true, list, idx: 0, frames: [], notes: {}, state: list.map(() => 0), bad: 0, quiet: 0, pauseUntil: performance.now() + 600};
+  buildCalDots(); renderCalNote(); placeCalGate();
+  $('calSens').value = cfg.sens;
+  calView('run'); ensureLoop();
+});
+$('calLo').addEventListener('change', calEst);
+$('calHi').addEventListener('change', calEst);
+$('calSkip').addEventListener('click', () => { if (calSt && calSt.run){ calSt.state[calSt.idx] = 2; calNext(performance.now()); } });
+$('calFinish').addEventListener('click', () => { if (calSt && calSt.run) calFinish(); });
+$('calSens').addEventListener('input', e => { cfg.sens = +e.target.value; $('sens').value = cfg.sens; placeGate(); placeCalGate(); save(); });
+$('calCancel0').addEventListener('click', () => calDlg.close());
+$('calClose').addEventListener('click', () => calDlg.close());
+$('calRedo').addEventListener('click', openCal);
+calDlg.addEventListener('close', () => {
+  if (calSt) calSt.run = false;
+  if (!current) stopMic();      // veio da tela inicial: solta o microfone ate o usuario tocar em Comecar
+});
+$('calOpen').addEventListener('click', openCal);
+$('calIntroBtn').addEventListener('click', openCal);
+$('calClear').addEventListener('click', () => {
+  cal = null; calRaw = null;
+  try { localStorage.removeItem(CALKEY); } catch(e){}
+  refreshCalInfo();
+});
+$('optCal').addEventListener('change', e => { cfg.useCal = e.target.checked; save(); matchFrames = 0; refreshCalInfo(); });
 
 /* ---------- ajustes ---------- */
 const dlg = $('settings');
@@ -670,8 +1100,8 @@ $('openSettings').addEventListener('click', () => {
   document.querySelectorAll('input[name=level]').forEach(i => { i.checked = i.value === cfg.level; });
   document.querySelectorAll('input[name=notation]').forEach(i => { i.checked = i.value === cfg.notation; });
   document.querySelectorAll('input[name=tol]').forEach(i => { i.checked = i.value === (TOL[cfg.tol] ? cfg.tol : 'normal'); });
-  $('optNotes').checked = cfg.showNotes; $('optKeys').checked = cfg.showKeys;
-  fillSlow();
+  $('optNotes').checked = cfg.showNotes; $('optKeys').checked = cfg.showKeys; $('optDiag').checked = !!cfg.diag;
+  fillSlow(); refreshCalInfo();
   dlg.showModal();
 });
 document.querySelectorAll('input[name=level]').forEach(i => i.addEventListener('change', () => {
@@ -685,6 +1115,7 @@ document.querySelectorAll('input[name=notation]').forEach(i => i.addEventListene
 }));
 $('optNotes').addEventListener('change', e => { cfg.showNotes = e.target.checked; save(); if (current) renderChord(); });
 $('optKeys').addEventListener('change', e => { cfg.showKeys = e.target.checked; save(); if (current) renderChord(); });
+$('optDiag').addEventListener('change', e => { cfg.diag = e.target.checked; save(); diagBest = null; diagFrozen = false; $('diagFreeze').textContent = 'Congelar'; layoutDiag(); });
 $('resetStats').addEventListener('click', () => {
   stats = {total:0, streak:0, best:0, per:{}, recent:[]}; save(); updateStats(); fillSlow();
 });
@@ -710,6 +1141,7 @@ fillOct();
 $('sens').value = cfg.sens;
 $('sens').addEventListener('input', e => { cfg.sens = +e.target.value; placeGate(); save(); });
 
+refreshCalInfo();
 buildKeyboard();
 })();
 </script>
