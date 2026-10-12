@@ -147,6 +147,9 @@ select:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 .cal-sum li{padding-bottom:8px;border-bottom:1px solid var(--line)}
 #calDone .row-end{flex-wrap:wrap}
 .btn.small{padding:8px 12px;font-size:14px}
+details.more{border-top:1px solid #8884;padding-top:10px}
+details.more summary{cursor:pointer;font-weight:600;padding:6px 0}
+details.more>*+*{margin-top:10px}
 </style>
 </head>
 <body data-mode="mic">
@@ -159,13 +162,12 @@ select:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
   <main class="stage" id="stage">
     <section class="intro" id="intro">
       <h1>Toque o acorde que aparecer</h1>
-      <p>O microfone escuta o piano. Acertou, vem o próximo.</p>
+      <p>Acertou, vem o próximo.</p>
       <button class="btn primary" id="start" type="button">Começar</button>
       <div class="err" id="err" role="alert" hidden></div>
       <button class="btn" id="calIntroBtn" type="button">Calibrar meu piano</button>
       <p class="hint-small" id="calIntroInfo"></p>
-      <button class="btn link" id="manualBtn" type="button">Sem microfone? Usar o teclado da tela</button>
-      <p class="hint-small">Fique num lugar silencioso, com o celular perto do piano. Nada é gravado nem enviado.</p>
+      <button class="btn link" id="manualBtn" type="button">Sem microfone</button>
     </section>
 
     <section class="play" id="play" hidden>
@@ -227,27 +229,15 @@ select:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
         <label for="octHi">até</label>
         <select id="octHi"></select>
       </div>
-      <p class="hint-small" id="octHelp"></p>
-    </div>
-
-    <div>
-      <h3>Notas fracas</h3>
-      <div class="seg" id="segTol">
-        <label><input type="radio" name="tol" value="rigido"><span>Exigente</span></label>
-        <label><input type="radio" name="tol" value="normal"><span>Normal</span></label>
-        <label><input type="radio" name="tol" value="flexivel"><span>Tolerante</span></label>
-      </div>
-      <p class="hint-small">Se o app diz que falta uma nota que você tocou (por exemplo um dedo mais fraco), use Tolerante. Se ele aceita acorde incompleto, use Exigente.</p>
     </div>
 
     <div>
       <h3>Calibração</h3>
-      <p class="hint-small" id="calStatus"></p>
       <div class="row-end">
-        <button class="btn" id="calOpen" type="button">Calibrar meu piano</button>
+        <span class="hint-small" id="calStatus"></span>
+        <button class="btn" id="calOpen" type="button">Calibrar</button>
         <button class="btn link" id="calClear" type="button">Apagar</button>
       </div>
-      <label class="switch">Compensar a afinação do piano <input type="checkbox" id="optCal"></label>
     </div>
 
     <div>
@@ -259,15 +249,23 @@ select:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
     </div>
 
     <div>
-      <label class="switch">Mostrar as notas do acorde <input type="checkbox" id="optNotes"></label>
-      <label class="switch">Mostrar o teclado <input type="checkbox" id="optKeys"></label>
-      <label class="switch">Mostrar diagnóstico (para ajustar o app) <input type="checkbox" id="optDiag"></label>
+      <label class="switch">Notas do acorde <input type="checkbox" id="optNotes"></label>
+      <label class="switch">Teclado <input type="checkbox" id="optKeys"></label>
     </div>
 
-    <div>
-      <h3>Acordes mais lentos</h3>
+    <details class="more">
+      <summary>Avançado</summary>
+      <h3>Notas fracas</h3>
+      <div class="seg" id="segTol">
+        <label><input type="radio" name="tol" value="rigido"><span>Exigente</span></label>
+        <label><input type="radio" name="tol" value="normal"><span>Normal</span></label>
+        <label><input type="radio" name="tol" value="flexivel"><span>Tolerante</span></label>
+      </div>
+      <label class="switch">Compensar afinação <input type="checkbox" id="optCal"></label>
+      <label class="switch">Diagnóstico <input type="checkbox" id="optDiag"></label>
+      <h3>Mais lentos</h3>
       <ul class="slow" id="slowList"></ul>
-    </div>
+    </details>
 
     <div class="row-end">
       <button class="btn link" id="resetStats" type="button">Zerar estatísticas</button>
@@ -281,8 +279,7 @@ select:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
     <h2>Calibrar o piano</h2>
 
     <div id="calIntro">
-      <p class="hint-small" style="font-size:15px;color:var(--ink)">O app já estima a afinação do seu piano sozinho enquanto você toca. Esta calibração rápida acerta isso de uma vez, tocando só algumas notas.</p>
-      <p class="hint-small" style="font-size:15px;color:var(--ink)">Toque cada nota pedida, uma por vez, com força média, e deixe soar por um segundo.</p>
+      <p class="hint-small" style="font-size:15px;color:var(--ink)">Toque cada nota pedida, uma por vez, e deixe soar.</p>
       <p class="hint-small" id="calEst" style="font-size:15px;color:var(--ink);font-weight:600"></p>
       <div class="err" id="calErr" role="alert" hidden></div>
       <div class="row-end">
@@ -309,7 +306,7 @@ select:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
       <ul class="cal-sum" id="calSum"></ul>
       <div class="row-end">
         <button class="btn link" id="calRedo" type="button">Refazer</button>
-        <button class="btn" id="calMore" type="button">Adicionar mais notas</button>
+        <button class="btn" id="calMore" type="button">Mais notas</button>
         <button class="btn primary" id="calClose" type="button" style="padding:10px 22px;font-size:16px">Pronto</button>
       </div>
     </div>
@@ -980,10 +977,10 @@ function calMsg(text, cls){
   if (cls === 'live'){ el.textContent = ''; const d = document.createElement('span'); d.className = 'dot'; el.append(d, text); }
   else el.textContent = text;
 }
-// Notas pedidas: etapa 0 = os Do de cada oitava (3 a 6, dentro das oitavas escolhidas); depois os Sol; depois os Mi.
+// Notas pedidas: etapa 0 = os Do de cada oitava (2 a 6, dentro das oitavas escolhidas); depois os Sol; depois os Mi.
 const CAL_PCS = [0, 7, 4];
 function calPlan(stage, have){
-  const aLo = Math.min(6, Math.max(3, cfg.octLo)), aHi = Math.max(aLo, Math.min(6, cfg.octHi));
+  const aLo = Math.min(6, Math.max(2, cfg.octLo)), aHi = Math.max(aLo, Math.min(6, cfg.octHi));
   const mk = pcs => { const l = []; for (let o = aLo; o <= aHi; o++) pcs.forEach(pc => l.push(12 * (o + 1) + pc)); return l.sort((x, y) => x - y); };
   const pcs = [CAL_PCS[stage]];
   let list = mk(pcs);
@@ -992,10 +989,8 @@ function calPlan(stage, have){
 }
 function refreshCalInfo(){
   const live = autoTuneN ? ' Agora o app estima ' + fmtCents(autoTune) + '.' : '';
-  $('calStatus').textContent = cal
-    ? 'Calibrado com ' + cal.count + ' notas. Afinação do piano: ' + fmtCents(cal.tuning) + ' em relação ao Lá 440 Hz.' + (cfg.useCal === false ? ' Está desligada.' : '')
-    : 'Sem calibração. O app já estima a afinação sozinho enquanto você toca.' + (cfg.useCal === false ? ' Está desligada.' : live);
-  $('calIntroInfo').textContent = cal ? 'Calibração salva.' : 'Opcional: 4 notas, uns 20 segundos.';
+  $('calStatus').textContent = cal ? 'Calibrado · ' + fmtCents(cal.tuning) : 'Automático';
+  $('calIntroInfo').textContent = cal ? 'Calibrado.' : '';
   $('calClear').hidden = !cal;
   $('optCal').checked = cfg.useCal !== false;
 }
@@ -1006,7 +1001,7 @@ function openCal(){
   if (dlg.open) dlg.close();
   calSt = null;
   const list = calPlan(0, {});
-  $('calEst').textContent = 'Notas pedidas: ' + list.map(midiName).join(', ') + '.';
+  $('calEst').textContent = list.map(midiName).join(' · ');
   $('calErr').hidden = true;
   calView('intro');
   calDlg.showModal();
@@ -1074,15 +1069,12 @@ function calFinish(){
   const li = txt => { const el = document.createElement('li'); el.textContent = txt; $('calSum').append(el); };
   $('calSum').textContent = '';
   if (!built){
-    li('Não consegui medir notas suficientes. Chegue mais perto do piano, aumente a sensibilidade e tente de novo.');
+    li('Poucas notas medidas. Chegue mais perto e tente de novo.');
   } else {
     calRaw = {t: Date.now(), notes: st.notes}; cal = built;
     try { localStorage.setItem(CALKEY, JSON.stringify(calRaw)); } catch(e){}
-    li(built.count + ' notas medidas, de ' + midiName(built.lo) + ' a ' + midiName(built.hi) + '.');
-    const t = Math.abs(built.tuning);
-    li(t < 8 ? 'Seu piano está afinado no Lá 440 Hz. Não foi preciso corrigir nada.'
-      : 'Seu piano está ' + fmtCents(built.tuning) + ' em relação ao Lá 440 Hz' + (t >= 25 ? '. Sem a compensação, o app erraria várias notas.' : '. O app já compensa isso.'));
-    if (built.spread >= 12) li('Do grave ao agudo a afinação varia cerca de ' + Math.round(built.spread) + ' cents. O app acompanha essa variação.');
+    li(midiName(built.lo) + ' a ' + midiName(built.hi) + ' · ' + built.count + ' notas');
+    li('Afinação: ' + (Math.abs(built.tuning) < 8 ? 'ok' : fmtCents(built.tuning)));
     const skipped = st.state.filter(v => v !== 1).length;
     if (skipped) li(skipped + (skipped === 1 ? ' nota foi pulada.' : ' notas foram puladas.'));
   }
@@ -1164,8 +1156,6 @@ function fillOct(){
     if (!el.options.length) for (let o = a[1]; o <= a[2]; o++) el.add(new Option(String(o), String(o)));
     el.value = String(cfg[a[0]]);
   });
-  $('octHelp').textContent = 'Vale de C' + cfg.octLo + ' a B' + cfg.octHi + ' (Dó central = C4). Notas fora dessa faixa são ignoradas, então o baixo da mão esquerda pode ficar de fora. Dentro dela, qualquer inversão vale.'
-    + (cfg.octLo <= 2 ? ' Com a oitava 2 o app espera um pouco mais para reconhecer.' : '');
 }
 function octChanged(changed){
   let lo = +$('octLo').value, hi = +$('octHi').value;
